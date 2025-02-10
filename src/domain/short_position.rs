@@ -8,6 +8,8 @@
 
 use crate::domain::{CnmvError, DataProviderError};
 use chrono::{DateTime, Utc};
+use once_cell::sync::Lazy;
+use regex::Regex;
 use std::fmt;
 
 /// Wrapper for a Result enum that might contain [ShortPosition] entries.
@@ -94,14 +96,19 @@ impl ShortResponse {
     /// Use this method to check whether a response of the GET method returned valid
     /// content or not.
     pub fn parse(s: String) -> Result<Self, CnmvError> {
+        static REG_ISIN: Lazy<Regex> = Lazy::new(|| Regex::new(r"ES(\d){10}").unwrap());
+
         match s.find("No se han encontrado datos disponibles") {
             Some(_) => match s.find("Serie histórica") {
                 Some(_) => Ok(Self(s)),
                 // Companies with a lack of historic (see Puig Brands) fall in this branch, though it is not an error.
-                None => match s.find("ES") {
-                    Some(_) => Ok(Self(s)),
-                    None => Err(CnmvError::UnknownCompany),
-                },
+                None => {
+                    if REG_ISIN.is_match(&s) {
+                        Ok(Self(s))
+                    } else {
+                        Err(CnmvError::UnknownCompany)
+                    }
+                }
             },
             None => Ok(Self(s)),
         }
@@ -134,9 +141,23 @@ mod tests {
             .expect("Failed to read the valid short response fixture")
     }
 
+    #[fixture]
+    #[once]
+    fn short_valid_fixture_puig() -> String {
+        read_to_string("test/fixtures/valid_short_response_puig.html")
+            .expect("Failed to read the valid short response fixture")
+    }
+
     #[rstest]
     fn parse_valid_response(short_valid_fixture: &String) -> Result<(), CnmvError> {
         ShortResponse::parse(short_valid_fixture.clone())?;
+
+        Ok(())
+    }
+
+    #[rstest]
+    fn parse_valid_response_puig(short_valid_fixture_puig: &String) -> Result<(), CnmvError> {
+        ShortResponse::parse(short_valid_fixture_puig.clone())?;
 
         Ok(())
     }
