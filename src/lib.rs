@@ -107,7 +107,7 @@ pub trait ShortDataProvider {
     /// When `Ok`, an array of [ShortPosition]s is returned. If there were no
     /// positions at the time specified by `time_frame`, an empty array is returned.
     ///
-    /// When `Err`, an error of type [DataProviderError] is returned.
+    /// When `Err`, an error of type [domain::DataProviderError] is returned.
     fn get_positions(&self, stock: &impl Company, time_frame: TimeFrame) -> ShortResult;
 }
 
