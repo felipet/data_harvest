@@ -14,7 +14,7 @@ use std::fmt;
 pub type ShortResult = Result<Vec<ShortPosition>, DataProviderError>;
 
 /// Short position entry.
-#[derive(Debug)]
+#[derive(Default, Debug, PartialEq)]
 pub struct ShortPosition {
     /// This is the name of the investment fund that owns the short position.
     pub owner: String,
@@ -25,7 +25,7 @@ pub struct ShortPosition {
     /// Date in which the short position was stated.
     pub open_date: DateTime<Utc>,
     /// The ticker of the asset.
-    pub stock: String,
+    pub ticker: String,
 }
 
 impl fmt::Display for ShortPosition {
@@ -75,7 +75,7 @@ impl fmt::Display for AliveShortPositions {
         for position in self.positions.iter() {
             writeln!(
                 f,
-                "✓ {}: <b>{} %</b> ({})",
+                "✓ {}: {}% ({})",
                 position.owner.as_str(),
                 position.weight,
                 position.open_date
