@@ -32,3 +32,9 @@ pub enum DbError {
     #[error("unknown db error")]
     Unknown(String),
 }
+
+#[derive(Error, Debug)]
+pub enum DataProviderError {
+    #[error("error from an external data source")]
+    ExternalError(String),
+}

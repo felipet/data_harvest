@@ -6,7 +6,7 @@
 
 //! Module that includes the definition of the ShortPosition data object and other related stuff.
 
-use crate::{CnmvError, DataProviderError};
+use crate::domain::{CnmvError, DataProviderError};
 use chrono::{DateTime, Utc};
 use std::fmt;
 
