@@ -97,7 +97,11 @@ impl ShortResponse {
         match s.find("No se han encontrado datos disponibles") {
             Some(_) => match s.find("Serie histórica") {
                 Some(_) => Ok(Self(s)),
-                None => Err(CnmvError::UnknownCompany),
+                // Companies with a lack of historic (see Puig Brands) fall in this branch, though it is not an error.
+                None => match s.find("ES") {
+                    Some(_) => Ok(Self(s)),
+                    None => Err(CnmvError::UnknownCompany),
+                },
             },
             None => Ok(Self(s)),
         }
