@@ -143,6 +143,11 @@ impl CnmvProvider {
     /// the request to the web page was successful. Open positions are included in the
     /// [positions](AliveShortPositions::positions) field of the struct. If there is no open
     /// position at the moment of checking, an empty collection is included.
+    #[instrument(
+        name = "Parse data from CNMV's page"
+        skip(self, stock),
+        fields(stock.name=stock.name(), stock.isin=stock.extra_id())
+      )]
     pub async fn short_positions(
         &self,
         stock: &IbexCompany,
@@ -179,7 +184,6 @@ impl CnmvProvider {
                 }
             }
 
-            println!("{date}");
             if &owner[..] != "dummy" {
                 let date = NaiveDate::parse_from_str(&date, "%d/%m/%Y").map_err(|_| {
                     CnmvError::InternalError(
@@ -202,7 +206,7 @@ impl CnmvProvider {
                     owner,
                     weight,
                     open_date,
-                    stock: stock.ticker().to_owned(),
+                    ticker: stock.ticker().to_owned(),
                 });
             }
         }
