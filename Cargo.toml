@@ -5,7 +5,7 @@ edition = "2021"
 authors = ['Felipe Torres González']
 description = "A library that harvests finance data from the Web."
 repository = "https://github.com/felipet/data_harvest"
-license = "MPLv2"
+license = "MPL-2.0"
 keywords = ['ibex35', 'finance', 'data_harvest', 'quantum']
 categories = ['finance']
 
