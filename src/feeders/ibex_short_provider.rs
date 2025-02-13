@@ -194,7 +194,7 @@ impl<'a> IbexShortFeeder<'a> {
                 .map_err(Box::new)?;
 
             // If we got some short position
-            if new_positions.total > 0.0 {
+            if !new_positions.positions.is_empty() {
                 debug!(
                     "The company {} has the following open short positions: {:?}",
                     company.ticker(),
