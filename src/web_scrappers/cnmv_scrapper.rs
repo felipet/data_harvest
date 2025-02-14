@@ -10,8 +10,7 @@
 //! of the Spanish _Comisión Nacional de Mercado de Valores (CNMV)_.
 
 use crate::{AliveShortPositions, CnmvError, ShortPosition, ShortResponse};
-use chrono::{offset::LocalResult, NaiveDate, TimeZone, Utc};
-use chrono_tz::Europe::Madrid;
+use chrono::{offset::LocalResult, Datelike, NaiveDate, TimeZone, Utc};
 use finance_api::Company;
 use finance_ibex::IbexCompany;
 use reqwest;
@@ -195,8 +194,8 @@ impl CnmvProvider {
                 })?;
 
                 let open_date =
-                    match Madrid.from_local_datetime(&date.and_hms_opt(15, 30, 0).unwrap()) {
-                        LocalResult::Single(value) => value.to_utc(),
+                    match Utc.with_ymd_and_hms(date.year(), date.month(), date.day(), 14, 30, 0) {
+                        LocalResult::Single(date) => date,
                         _ => {
                             error!("The given naive date: ({date}) does not convert to UTC.");
                             return Err(CnmvError::InternalError(
