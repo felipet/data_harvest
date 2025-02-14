@@ -98,6 +98,12 @@ impl ShortResponse {
     pub fn parse(s: String) -> Result<Self, CnmvError> {
         static REG_ISIN: Lazy<Regex> = Lazy::new(|| Regex::new(r"ES(\d){10}").unwrap());
 
+        if s.contains("No ha sido posible completar su consulta") {
+            return Err(CnmvError::ExternalError(
+                "The request could be processed by the external server".to_owned(),
+            ));
+        }
+
         match s.find("No se han encontrado datos disponibles") {
             Some(_) => match s.find("Serie histórica") {
                 Some(_) => Ok(Self(s)),
@@ -143,6 +149,13 @@ mod tests {
 
     #[fixture]
     #[once]
+    fn short_invalid_fixture_unknown() -> String {
+        read_to_string("test/fixtures/invalid_short_response_unknown_error.html")
+            .expect("Failed to read the valid short response fixture")
+    }
+
+    #[fixture]
+    #[once]
     fn short_valid_fixture_puig() -> String {
         read_to_string("test/fixtures/valid_short_response_puig.html")
             .expect("Failed to read the valid short response fixture")
@@ -165,5 +178,10 @@ mod tests {
     #[rstest]
     fn parse_invalid_response(short_invalid_fixture: &String) {
         assert!(ShortResponse::parse(short_invalid_fixture.clone()).is_err());
+    }
+
+    #[rstest]
+    fn parse_invalid_response_unknown(short_invalid_fixture_unknown: &String) {
+        assert!(ShortResponse::parse(short_invalid_fixture_unknown.clone()).is_err());
     }
 }
