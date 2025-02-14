@@ -16,7 +16,7 @@ use finance_api::Company;
 use finance_ibex::IbexCompany;
 use reqwest;
 use scraper::{Html, Selector};
-use tracing::{error, instrument, trace, debug};
+use tracing::{debug, error, instrument, trace};
 
 /// Handler to extract data from the CNMV web page.
 ///
@@ -96,7 +96,7 @@ impl CnmvProvider {
             EndpointSel::ShortEP => {
                 trace!("Collecting data for the short position endpoint");
                 &self.short_ext[..]
-            },
+            }
         };
 
         // Retrieve the companie's ISIN.
@@ -205,7 +205,10 @@ impl CnmvProvider {
                         }
                     };
 
-                debug!("A valid short position was detected: {owner} - {weight} - {open_date} - {}", stock.ticker());
+                debug!(
+                    "A valid short position was detected: {owner} - {weight} - {open_date} - {}",
+                    stock.ticker()
+                );
 
                 positions.push(ShortPosition {
                     owner,

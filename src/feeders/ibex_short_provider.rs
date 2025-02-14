@@ -11,7 +11,7 @@ use finance_ibex::IbexCompany;
 use sqlx::{prelude::FromRow, types::Uuid, Executor, PgPool};
 use std::error::Error;
 use std::sync::Arc;
-use tracing::{debug, error, info, warn, instrument};
+use tracing::{debug, error, info, instrument, warn};
 
 /// Data provider for short positions against stocks that belong to the Ibex35.
 ///
@@ -199,7 +199,11 @@ impl<'a> IbexShortFeeder<'a> {
                 // First, let's get a list of the active short positions for the company which are already registered
                 // in the DB.
                 let stored_position = self.active_positions(company.ticker()).await?;
-                debug!("Stored positions for {}: {:?}", company.ticker(), stored_position);
+                debug!(
+                    "Stored positions for {}: {:?}",
+                    company.ticker(),
+                    stored_position
+                );
 
                 // Check whether any new position was already present in the DB.
                 for new_position in new_positions.positions {
