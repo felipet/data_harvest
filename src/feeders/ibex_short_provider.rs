@@ -11,7 +11,7 @@ use finance_ibex::IbexCompany;
 use sqlx::{prelude::FromRow, types::Uuid, Executor, PgPool};
 use std::error::Error;
 use std::sync::Arc;
-use tracing::{debug, error, info, instrument};
+use tracing::{debug, error, info, warn, instrument};
 
 /// Data provider for short positions against stocks that belong to the Ibex35.
 ///
@@ -184,6 +184,7 @@ impl<'a> IbexShortFeeder<'a> {
     pub async fn add_today_data(&self) -> Result<(), Box<dyn Error>> {
         // Let's get an updated listing of the Ibex35's companies.
         let companies = self.stock_listing().await?;
+        debug!("{} companies listed from the IBEX35", companies.len());
 
         // For each company, request to the CNMV's site if there's any open short position.
         for company in companies.iter().filter(|x| x.extra_id().is_some()) {
@@ -195,14 +196,10 @@ impl<'a> IbexShortFeeder<'a> {
 
             // If we got some short position
             if !new_positions.positions.is_empty() {
-                debug!(
-                    "The company {} has the following open short positions: {:?}",
-                    company.ticker(),
-                    new_positions.positions
-                );
                 // First, let's get a list of the active short positions for the company which are already registered
                 // in the DB.
                 let stored_position = self.active_positions(company.ticker()).await?;
+                debug!("Stored positions for {}: {:?}", company.ticker(), stored_position);
 
                 // Check whether any new position was already present in the DB.
                 for new_position in new_positions.positions {
@@ -258,7 +255,7 @@ impl<'a> IbexShortFeeder<'a> {
                 let stored_active_positions = self.active_positions(company.ticker()).await?;
 
                 if !stored_active_positions.is_empty() {
-                    info!(
+                    warn!(
                         "The company {} got free of significant short positions",
                         company.ticker()
                     );
@@ -286,8 +283,6 @@ impl<'a> IbexShortFeeder<'a> {
             Ok(c) => c,
             Err(e) => return Err(DbError::Unknown(format!("{e}"))),
         };
-
-        debug!("The listing of companies of the Ibex35: {:?}", companies);
 
         Ok(companies)
     }
@@ -388,6 +383,8 @@ impl<'a> IbexShortFeeder<'a> {
             .commit()
             .await
             .map_err(|e| DbError::Unknown(e.to_string()))?;
+
+        info!("New position registered in the record ({uuid})");
 
         Ok(uuid)
     }

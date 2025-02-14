@@ -16,7 +16,7 @@ use finance_api::Company;
 use finance_ibex::IbexCompany;
 use reqwest;
 use scraper::{Html, Selector};
-use tracing::{error, instrument, trace};
+use tracing::{error, instrument, trace, debug};
 
 /// Handler to extract data from the CNMV web page.
 ///
@@ -93,7 +93,10 @@ impl CnmvProvider {
     ) -> Result<ShortResponse, CnmvError> {
         // Select the endpoint that shall be used for the requested GET.
         let endpoint = match endpoint {
-            EndpointSel::ShortEP => &self.short_ext[..],
+            EndpointSel::ShortEP => {
+                trace!("Collecting data for the short position endpoint");
+                &self.short_ext[..]
+            },
         };
 
         // Retrieve the companie's ISIN.
@@ -111,15 +114,15 @@ impl CnmvProvider {
 
         if resp.status().as_u16() != 200 {
             let error_string = resp.status().as_str().to_string();
-            error!("Error found during the request: {error_string}");
             Err(CnmvError::ExternalError(error_string))
         } else {
+            trace!("The endpoint returned valid data, proceeding to parse it");
             let response = ShortResponse::parse(
                 resp.text()
                     .await
                     .map_err(|e| CnmvError::InternalError(e.to_string()))?,
             )?;
-            trace!("Response: {:?}", response);
+
             Ok(response)
         }
     }
@@ -195,12 +198,14 @@ impl CnmvProvider {
                     match Madrid.from_local_datetime(&date.and_hms_opt(15, 30, 0).unwrap()) {
                         LocalResult::Single(value) => value.to_utc(),
                         _ => {
-                            error!("The given naive date does not convert to UTC.");
+                            error!("The given naive date: ({date}) does not convert to UTC.");
                             return Err(CnmvError::InternalError(
                                 "Failed to build a valid date.".to_owned(),
                             ));
                         }
                     };
+
+                debug!("A valid short position was detected: {owner} - {weight} - {open_date} - {}", stock.ticker());
 
                 positions.push(ShortPosition {
                     owner,
