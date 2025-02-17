@@ -1,6 +1,6 @@
 # Rust Finance Data Harvest Library
 
-[![License](https://img.shields.io/github/license/felipet/lacoctelera_backend?style=flat-square)](https://github.com/felipet/data_harvest/blob/main/LICENSE)
+[![License](https://img.shields.io/github/license/felipet/data_harvest?style=flat-square)](https://github.com/felipet/data_harvest/blob/main/LICENSE)
 ![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/felipet/data_harvest/rust.yml?style=flat-square&label=CI%20status)
 
 This library includes several modules that extract finance and stock related data from web sites. The main purpose
