@@ -188,86 +188,123 @@ impl<'a> IbexShortFeeder<'a> {
 
         // For each company, request to the CNMV's site if there's any open short position.
         for company in companies.iter().filter(|x| x.extra_id().is_some()) {
+            // Build an array of positions coming from the web (new).
             let new_positions = self
                 .scrapper
                 .short_positions(company)
                 .await
-                .map_err(Box::new)?;
+                .map_err(Box::new)?
+                .positions;
 
-            // If we got some short position
-            if !new_positions.positions.is_empty() {
-                // First, let's get a list of the active short positions for the company which are already registered
-                // in the DB.
-                let stored_position = self.active_positions(company.ticker()).await?;
+            // And an array of positions coming from the DB (stored).
+            let stored_positions = self.active_positions(company.ticker()).await?;
+
+            // Dummy case: neither record nor new positions were found.
+            if stored_positions.is_empty() && new_positions.is_empty() {
                 debug!(
-                    "Stored positions for {}: {:?}",
-                    company.ticker(),
-                    stored_position
-                );
-
-                // Check whether any new position was already present in the DB.
-                for new_position in new_positions.positions {
-                    // The first time a short position is notified, the DB will be empty.
-                    if !stored_position.is_empty() {
-                        // Search the new position in the stored register.
-                        let mut found = false;
-
-                        for item in stored_position.iter() {
-                            let z = ShortPosition::try_from(item)?;
-
-                            if z == new_position {
-                                info!(
-                                    "The position owned by {} against {} was already in the record",
-                                    new_position.owner, new_position.ticker
-                                );
-                                found = true;
-                                break;
-                            }
-                        }
-
-                        // If we haven't found the new position in the active position list, store it.
-                        if !found {
-                            debug!(
-                                "The position owned by {} against {} was not in the record",
-                                new_position.owner, new_position.ticker
-                            );
-                            let previous_active_position = match self
-                                .active_position(&new_position.ticker, &new_position.owner)
-                                .await?
-                            {
-                                Some(p) => p.id,
-                                None => None,
-                            };
-
-                            self.insert_short_position(&new_position, previous_active_position)
-                                .await?;
-                        }
-                    } else {
-                        // Store the new position.
-                        info!("No previous short position was stored for {}, recording the new one ({})", new_position.ticker, new_position.owner);
-                        self.insert_short_position(&new_position, None).await?;
-                    }
-                }
-            } else {
-                // The company has no open positions at the moment. Check if there's any active position in the
-                // DB to wipe it.
-                info!(
                     "The company {} has no open short positions",
                     company.ticker()
                 );
+                continue;
+            // First case: All the sort positions are new (there were no previously registered positions).
+            } else if stored_positions.is_empty() {
+                warn!(
+                    "The company {} got new short positions against it",
+                    company.ticker()
+                );
 
-                let stored_active_positions = self.active_positions(company.ticker()).await?;
-
-                if !stored_active_positions.is_empty() {
-                    warn!(
-                        "The company {} got free of significant short positions",
-                        company.ticker()
+                for position in new_positions {
+                    // Store the new position.
+                    info!(
+                        "No previous short position was stored for {}, recording the new one ({})",
+                        position.ticker, position.owner
                     );
-                    for position in stored_active_positions.iter() {
-                        match position.id {
-                            Some(id) => self.wipe_short_position(&id).await?,
-                            None => error!("Corrupt data in the DB: {:?}", position),
+                    self.insert_short_position(&position, None).await?;
+                }
+            // Second case: All the short positons got reduced below the threshold. We need to wipe all the current
+            // active positions.
+            } else if new_positions.is_empty() {
+                warn!(
+                    "The company {} got free of significant short positions",
+                    company.ticker()
+                );
+
+                for position in stored_positions.iter() {
+                    match &position.id {
+                        Some(id) => self.wipe_short_position(id).await?,
+                        None => error!("Corrupt data in the DB: {:?}", position),
+                    }
+                }
+
+                info!(
+                    "All the active positions got wiped for {}",
+                    company.ticker()
+                );
+            } else {
+                // First, let's check if any existing position got updated.
+                for new_position in new_positions.iter() {
+                    let mut found = false;
+
+                    // Got updated or simply exists?
+                    for old_position in stored_positions.iter() {
+                        let op = ShortPosition::try_from(old_position)?;
+
+                        if *new_position == op {
+                            debug!(
+                                "The position owned by {} against {} was already in the record",
+                                new_position.owner, new_position.ticker
+                            );
+                            found = true;
+                            break;
                         }
+                    }
+
+                    // If found is false, either the position is new, or is an update of an existing one.
+                    if !found {
+                        // Check if it is an update.
+                        let previous_active_position = match self
+                            .active_position(&new_position.ticker, &new_position.owner)
+                            .await?
+                        {
+                            Some(p) => {
+                                info!(
+                                    "The position owned by {} against {} got updated",
+                                    new_position.owner, new_position.ticker
+                                );
+                                p.id
+                            }
+                            None => {
+                                warn!(
+                                    "A new short position against {} owned by {} got registered",
+                                    new_position.ticker, new_position.owner
+                                );
+                                None
+                            }
+                        };
+
+                        self.insert_short_position(new_position, previous_active_position)
+                            .await?;
+                    }
+                }
+
+                // Second, let's check if an existing position got wiped.
+                for old_position in stored_positions.iter() {
+                    let mut found = false;
+
+                    for new_position in new_positions.iter() {
+                        let op = ShortPosition::try_from(old_position)?;
+
+                        if new_position.owner == op.owner && new_position.ticker == op.ticker {
+                            found = true;
+                            break;
+                        }
+                    }
+
+                    // If the position was not found, it must be have been wiped.
+                    if !found {
+                        warn!("A previous position owned by {} against {} got reduced below the threshold", old_position.owner.clone().unwrap(), old_position.ticker.clone().unwrap());
+                        self.wipe_short_position(&old_position.id.unwrap()).await?;
+                        debug!("Active position {} wiped", old_position.id.unwrap());
                     }
                 }
             }
