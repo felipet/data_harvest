@@ -1,6 +1,6 @@
 [package]
 name = "data_harvest"
-version = "0.2.2"
+version = "0.3.0"
 edition = "2021"
 authors = ['Felipe Torres González']
 description = "A library that harvests finance data from the Web."

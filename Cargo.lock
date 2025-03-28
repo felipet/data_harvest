@@ -281,7 +281,7 @@ dependencies = [
 
 [[package]]
 name = "data_harvest"
-version = "0.2.2"
+version = "0.3.0"
 dependencies = [
  "chrono",
  "finance_api",
