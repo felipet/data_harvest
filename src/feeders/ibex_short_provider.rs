@@ -181,9 +181,11 @@ impl<'a> IbexShortFeeder<'a> {
     }
 
     #[instrument(name = "Refresh short positions", skip(self))]
-    pub async fn add_today_data(&self) -> Result<(), Box<dyn Error>> {
+    pub async fn add_today_data(&self) -> Result<Vec<String>, Box<dyn Error>> {
         // Let's get an updated listing of the Ibex35's companies.
         let companies = self.stock_listing().await?;
+        // Keep an array with the tickers that get updated.
+        let mut updated_tickers = Vec::new();
         debug!("{} companies listed from the IBEX35", companies.len());
 
         // For each company, request to the CNMV's site if there's any open short position.
@@ -212,6 +214,7 @@ impl<'a> IbexShortFeeder<'a> {
                     "The company {} got new short positions against it",
                     company.ticker()
                 );
+                updated_tickers.push(company.ticker().to_owned());
 
                 for position in new_positions {
                     // Store the new position.
@@ -221,13 +224,14 @@ impl<'a> IbexShortFeeder<'a> {
                     );
                     self.insert_short_position(&position, None).await?;
                 }
-            // Second case: All the short positons got reduced below the threshold. We need to wipe all the current
+            // Second case: All the short positions got reduced below the threshold. We need to wipe all the current
             // active positions.
             } else if new_positions.is_empty() {
                 warn!(
                     "The company {} got free of significant short positions",
                     company.ticker()
                 );
+                updated_tickers.push(company.ticker().to_owned());
 
                 for position in stored_positions.iter() {
                     match &position.id {
@@ -241,6 +245,7 @@ impl<'a> IbexShortFeeder<'a> {
                     company.ticker()
                 );
             } else {
+                let mut insert_ticker = true;
                 // First, let's check if any existing position got updated.
                 for new_position in new_positions.iter() {
                     let mut found = false;
@@ -255,6 +260,7 @@ impl<'a> IbexShortFeeder<'a> {
                                 new_position.owner, new_position.ticker
                             );
                             found = true;
+                            insert_ticker = false;
                             break;
                         }
                     }
@@ -305,12 +311,17 @@ impl<'a> IbexShortFeeder<'a> {
                         warn!("A previous position owned by {} against {} got reduced below the threshold", old_position.owner.clone().unwrap(), old_position.ticker.clone().unwrap());
                         self.wipe_short_position(&old_position.id.unwrap()).await?;
                         debug!("Active position {} wiped", old_position.id.unwrap());
+                        insert_ticker = true;
                     }
+                }
+
+                if insert_ticker {
+                    updated_tickers.push(company.ticker().to_owned());
                 }
             }
         }
 
-        Ok(())
+        Ok(updated_tickers)
     }
 
     #[instrument(name = "List the companies of the IBEX35", skip(self))]
