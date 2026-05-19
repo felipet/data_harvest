@@ -4,11 +4,11 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-use crate::{web_scrappers::CnmvProvider, DbError, ShortPosition};
+use crate::{DbError, ShortPosition, web_scrappers::CnmvProvider};
 use chrono::{DateTime, FixedOffset, NaiveDateTime, TimeZone, Utc};
 use finance_api::Company;
 use finance_ibex::IbexCompany;
-use sqlx::{prelude::FromRow, types::Uuid, Executor, PgPool};
+use sqlx::{Executor, PgPool, prelude::FromRow, types::Uuid};
 use std::error::Error;
 use std::sync::Arc;
 use tracing::{debug, error, info, instrument, warn};
@@ -66,7 +66,7 @@ impl TryFrom<&IbexCompanyBd> for IbexCompany {
                 return Err(DbError::MissingStockInfo(format!(
                     "Missing name: {:?}",
                     value
-                )))
+                )));
             }
         };
         let fname = value.full_name.as_deref();
@@ -77,7 +77,7 @@ impl TryFrom<&IbexCompanyBd> for IbexCompany {
                 return Err(DbError::MissingStockInfo(format!(
                     "Missing ticker: {:?}",
                     value
-                )))
+                )));
             }
         };
 
@@ -87,7 +87,7 @@ impl TryFrom<&IbexCompanyBd> for IbexCompany {
                 return Err(DbError::MissingStockInfo(format!(
                     "Missing ISIN: {:?}",
                     value
-                )))
+                )));
             }
         };
 
@@ -308,7 +308,11 @@ impl<'a> IbexShortFeeder<'a> {
 
                     // If the position was not found, it must be have been wiped.
                     if !found {
-                        warn!("A previous position owned by {} against {} got reduced below the threshold", old_position.owner.clone().unwrap(), old_position.ticker.clone().unwrap());
+                        warn!(
+                            "A previous position owned by {} against {} got reduced below the threshold",
+                            old_position.owner.clone().unwrap(),
+                            old_position.ticker.clone().unwrap()
+                        );
                         self.wipe_short_position(&old_position.id.unwrap()).await?;
                         debug!("Active position {} wiped", old_position.id.unwrap());
                         insert_ticker = true;

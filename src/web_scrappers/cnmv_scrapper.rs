@@ -10,7 +10,7 @@
 //! of the Spanish _Comisión Nacional de Mercado de Valores (CNMV)_.
 
 use crate::{AliveShortPositions, CnmvError, ShortPosition, ShortResponse};
-use chrono::{offset::LocalResult, Datelike, NaiveDate, TimeZone, Utc};
+use chrono::{Datelike, NaiveDate, TimeZone, Utc, offset::LocalResult};
 use finance_api::Company;
 use finance_ibex::IbexCompany;
 use reqwest;
