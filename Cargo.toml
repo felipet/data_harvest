@@ -1,7 +1,7 @@
 [package]
 name = "data_harvest"
-version = "0.3.0"
-edition = "2021"
+version = "0.3.1"
+edition = "2024"
 authors = ['Felipe Torres González']
 description = "A library that harvests finance data from the Web."
 repository = "https://github.com/felipet/data_harvest"
@@ -10,19 +10,25 @@ keywords = ['ibex35', 'finance', 'data_harvest', 'quantum']
 categories = ['finance']
 
 [dependencies]
-chrono = { version = "0.4.38", features = ["alloc", "std", "clock"] }
+chrono = { version = "0.4.44", features = ["alloc", "std", "clock"] }
 finance_api = "0.1.0"
 finance_ibex = "0.1.0-beta1"
-log = "0.4.21"
-reqwest = { version = "0.12.12", features = ["blocking", "json"] }
-rstest = "0.24.0"
-scraper = "0.18.1"
-tracing = "0.1.41"
-sqlx = { version = "0.8", features = ["runtime-tokio", "macros", "postgres", "uuid", "chrono"] }
-thiserror = "2.0.11"
-uuid = { version = "1.13.1", features = ["v4"] }
-regex = "1.11.1"
-once_cell = "1.20.3"
+log = "0.4.29"
+reqwest = { version = "0.13.3", features = ["blocking", "json"] }
+rstest = "0.26.1"
+scraper = "0.27.0"
+tracing = "0.1.44"
+sqlx = { version = "0.8", features = [
+    "runtime-tokio",
+    "macros",
+    "postgres",
+    "uuid",
+    "chrono",
+] }
+thiserror = "2.0.18"
+uuid = { version = "1.23.1", features = ["v4"] }
+regex = "1.12.3"
+once_cell = "1.21.4"
 
 [dev-dependencies]
-tokio = {version = "1.43.0", features = ["rt-multi-thread", "macros"]}
+tokio = { version = "1.52.3", features = ["rt-multi-thread", "macros"] }
